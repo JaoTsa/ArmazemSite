@@ -1,0 +1,195 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consulta de Estoque</title>
+    <link href="/css/output.css" rel="stylesheet">
+    <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body class="bg-gray-100 flex flex-col items-center min-h-screen">
+    <div class="w-full max-w-4xl p-6">
+        <h1 class="text-2xl font-bold text-center mb-6">Consulta de Estoque</h1>
+        <div class="mb-4">
+            <input
+                type="text"
+                id="searchInput"
+                placeholder="Digite a Referência ou Descrição..."
+                class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+        </div>
+        <div id="results" class="bg-white shadow-md rounded-md p-4">
+            <p class="text-gray-500">Carregando dados, por favor aguarde...</p>
+        </div>
+    </div>
+
+    <script>
+        // Função para normalizar strings
+        function normalizeString(str) {
+            if (str === null || str === undefined) return '';
+            return str
+                .toString()
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
+        async function loadExcel() {
+            try {
+                const fileName = encodeURI('Referencias Spares___ (1).xlsm');
+                const response = await fetch(fileName);
+                if (!response.ok) {
+                    throw new Error(`Erro HTTP: ${response.status} ${response.statusText}`);
+                }
+                const arrayBuffer = await response.arrayBuffer();
+                const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+                
+                const sheet = workbook.Sheets['MASTER'];
+                if (!sheet) {
+                    throw new Error('Aba "MASTER" não encontrada.');
+                }
+                
+                const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+                
+                const rawHeaders = data[6];
+                console.log('Cabeçalhos brutos (linha 7):', rawHeaders);
+                
+                const headerMap = {
+                    'REFERÊNCIA': rawHeaders[2], // C7
+                    'DESCRIÇÃO': rawHeaders[3],  // D7
+                    'LOCALIZAÇÃO': rawHeaders[9]  // J7
+                };
+                console.log('Cabeçalhos mapeados:', headerMap);
+                
+                if (!headerMap['REFERÊNCIA'] || !headerMap['DESCRIÇÃO'] || !headerMap['LOCALIZAÇÃO']) {
+                    throw new Error('Cabeçalhos esperados (REFERÊNCIA, DESCRIÇÃO, LOCALIZAÇÃO) não encontrados em C7, D7, J7.');
+                }
+                
+                const formattedData = data.slice(7).map(row => ({
+                    'REFERÊNCIA': row[2],  // Coluna C
+                    'DESCRIÇÃO': row[3],   // Coluna D
+                    'LOCALIZAÇÃO': row[9]  // Coluna J
+                })).filter(row => row['REFERÊNCIA'] || row['DESCRIÇÃO']);
+                
+                console.log('Dados carregados:', formattedData);
+                return formattedData;
+            } catch (error) {
+                console.error('Erro ao carregar o Excel:', error.message);
+                document.getElementById('results').innerHTML = 
+                    `<p class="text-red-500">Erro: ${error.message}. Verifique se o arquivo está na raiz do projeto.</p>`;
+                return [];
+            }
+        }
+
+        function searchItems(query, data) {
+            query = normalizeString(query);
+            if (!query) return [];
+            return data.filter(item => {
+                const referencia = normalizeString(item['REFERÊNCIA']);
+                const descricao = normalizeString(item['DESCRIÇÃO']);
+                return referencia.includes(query) || descricao.includes(query);
+            });
+        }
+
+        function displayResults(items, isLoading = false) {
+            const resultsDiv = document.getElementById('results');
+            if (isLoading) {
+                resultsDiv.innerHTML = '<p class="text-gray-500">Carregando dados, por favor aguarde...</p>';
+                return;
+            }
+            if (items.length === 0) {
+                resultsDiv.innerHTML = '<p class="text-gray-500">Nenhum item encontrado.</p>';
+                return;
+            }
+            resultsDiv.innerHTML = `
+                <table class="w-full border-collapse">
+                    <thead>
+                        <tr class="bg-gray-200">
+                            <th class="p-2 border">Referência</th>
+                            <th class="p-2 border">Descrição</th>
+                            <th class="p-2 border">Localização</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${items.map(item => `
+                            <tr class="hover:bg-gray-50">
+                                <td class="p-2 border">${item['REFERÊNCIA'] || '-'}</td>
+                                <td class="p-2 border">${item['DESCRIÇÃO'] || '-'}</td>
+                                <td class="p-2 border">${item['LOCALIZAÇÃO'] || '-'}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        async function init() {
+            // Exibe "carregando" imediatamente
+            displayResults([], true);
+            
+            // Carrega os dados em segundo plano
+            const data = await loadExcel();
+            
+            // Habilita a busca após o carregamento
+            const searchInput = document.getElementById('searchInput');
+            searchInput.disabled = false; // Garante que o input esteja habilitado
+            searchInput.focus(); // Melhora a UX no celular
+            
+            searchInput.addEventListener('input', () => {
+                const query = searchInput.value;
+                const results = searchItems(query, data);
+                displayResults(results);
+            });
+            
+            // Exibe mensagem inicial se não houver busca
+            displayResults([]);
+        }
+
+        // Carrega o Excel após a página estar pronta, com pequeno atraso
+        window.onload = () => {
+            setTimeout(init, 100); // Atraso mínimo para garantir interatividade
+        };
+    </script>
+</body>
+</html>
