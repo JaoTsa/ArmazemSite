@@ -57,6 +57,7 @@
         // Função para carregar o XLSM
         async function loadData() {
             try {
+                console.log('Iniciando carregamento de Referencias_Spares.xlsm...');
                 const response = await fetch('/Referencias_Spares.xlsm');
                 if (!response.ok) {
                     throw new Error('Arquivo XLSM não encontrado em /public');
@@ -65,6 +66,7 @@
                 const workbook = XLSX.read(arrayBuffer, { type: 'array' });
 
                 // Verifica se a planilha "MASTER" existe
+                console.log('Planilhas disponíveis:', workbook.SheetNames);
                 if (!workbook.SheetNames.includes('MASTER')) {
                     throw new Error('Planilha "MASTER" não encontrada no arquivo XLSM');
                 }
@@ -75,12 +77,12 @@
 
                 // Mapeia apenas as colunas C (2), D (3), J (9)
                 stockData = rawData.map((row, index) => ({
-                    'Código do Item': row[XLSX.utils.encode_cell({ c: 2, r: 6 + index + 1 })[1]] || '',
-                    'Descrição': row[XLSX.utils.encode_cell({ c: 3, r: 6 + index + 1 })[1]] || '',
-                    'Localização': row[XLSX.utils.encode_cell({ c: 9, r: 6 + index + 1 })[1]] || ''
+                    'Código do Item': row['Código do Item'] || row[XLSX.utils.encode_cell({ c: 2, r: 6 + index + 1 })[1]] || '',
+                    'DESCRIÇÃO': row['DESCRIÇÃO'] || row[XLSX.utils.encode_cell({ c: 3, r: 6 + index + 1 })[1]] || '',
+                    'LOCALIZAÇÃO': row['LOCALIZAÇÃO'] || row[XLSX.utils.encode_cell({ c: 9, r: 6 + index + 1 })[1]] || ''
                 }));
 
-                console.log('Dados carregados:', stockData); // Log para depuração
+                console.log('Dados carregados:', stockData);
                 document.getElementById('status').innerHTML = 'Dados carregados com sucesso!';
                 displayResults(stockData); // Mostra todos os itens inicialmente
             } catch (error) {
@@ -94,19 +96,21 @@
             const resultsDiv = document.getElementById('results');
             if (!data || data.length === 0) {
                 resultsDiv.innerHTML = '<p>Nenhum item encontrado.</p>';
+                console.log('Nenhum dado para exibir');
                 return;
             }
 
-            let table = '<table><tr><th>Código do Item</th><th>Descrição</th><th>Localização</th></tr>';
+            let table = '<table><tr><th>Código do Item</th><th>DESCRIÇÃO</th><th>LOCALIZAÇÃO</th></tr>';
             data.forEach(row => {
                 table += `<tr>
                     <td>${row['Código do Item'] || ''}</td>
-                    <td>${row['Descrição'] || ''}</td>
-                    <td>${row['Localização'] || ''}</td>
+                    <td>${row['DESCRIÇÃO'] || ''}</td>
+                    <td>${row['LOCALIZAÇÃO'] || ''}</td>
                 </tr>`;
             });
             table += '</table>';
             resultsDiv.innerHTML = table;
+            console.log('Tabela exibida com', data.length, 'itens');
         }
 
         // Função de pesquisa
@@ -114,9 +118,9 @@
             const query = document.getElementById('searchInput').value.toLowerCase();
             const filtered = stockData.filter(item => 
                 (item['Código do Item'] && item['Código do Item'].toString().toLowerCase().includes(query)) ||
-                (item['Descrição'] && item['Descrição'].toString().toLowerCase().includes(query))
+                (item['DESCRIÇÃO'] && item['DESCRIÇÃO'].toString().toLowerCase().includes(query))
             );
-            console.log('Resultados filtrados:', filtered); // Log para depuração
+            console.log('Pesquisa com query:', query, 'Resultados:', filtered);
             displayResults(filtered);
         }
 
