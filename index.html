@@ -56,7 +56,7 @@
 
         // Função para carregar o CSV
         function loadData() {
-            Papa.parse('Referencias_Spares.xlsm', {
+            Papa.parse('/Referencias_Spares.csv', {
                 download: true,
                 header: true,
                 complete: function(results) {
@@ -65,7 +65,7 @@
                     displayResults(stockData); // Mostra todos os itens inicialmente
                 },
                 error: function(error) {
-                    document.getElementById('status').innerHTML = 'Erro ao carregar Referencias_Spares.csv. Verifique se o arquivo está na raiz do repositório e é um CSV válido.';
+                    document.getElementById('status').innerHTML = 'Erro ao carregar Referencias_Spares.csv. Verifique se o arquivo está na pasta /public no GitHub.';
                     console.error('Erro ao carregar o CSV:', error);
                 }
             });
