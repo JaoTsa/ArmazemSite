@@ -59,7 +59,7 @@
             try {
                 const response = await fetch('/Referencias_Spares.xlsm');
                 if (!response.ok) {
-                    throw new Error('Arquivo XLSM não encontrado');
+                    throw new Error('Arquivo XLSM não encontrado em /public');
                 }
                 const arrayBuffer = await response.arrayBuffer();
                 const workbook = XLSX.read(arrayBuffer, { type: 'array' });
@@ -70,16 +70,17 @@
                 }
 
                 const sheet = workbook.Sheets['MASTER'];
-                // Converte a planilha para JSON, começando da linha 7
-                const rawData = XLSX.utils.sheet_to_json(sheet, { range: 6 }); // range: 6 começa na linha 7 (0-based)
+                // Converte a planilha para JSON, começando da linha 7 (range: 6)
+                const rawData = XLSX.utils.sheet_to_json(sheet, { range: 6, defval: '' });
 
-                // Mapeia apenas as colunas C (2), D (3), J (9) com nomes personalizados
-                stockData = rawData.map(row => ({
-                    'Código do Item': row[XLSX.utils.encode_cell({ c: 2, r: 6 + rawData.indexOf(row) + 1 })[1]] || '',
-                    'Descrição': row[XLSX.utils.encode_cell({ c: 3, r: 6 + rawData.indexOf(row) + 1 })[1]] || '',
-                    'Localização': row[XLSX.utils.encode_cell({ c: 9, r: 6 + rawData.indexOf(row) + 1 })[1]] || ''
+                // Mapeia apenas as colunas C (2), D (3), J (9)
+                stockData = rawData.map((row, index) => ({
+                    'Código do Item': row[XLSX.utils.encode_cell({ c: 2, r: 6 + index + 1 })[1]] || '',
+                    'Descrição': row[XLSX.utils.encode_cell({ c: 3, r: 6 + index + 1 })[1]] || '',
+                    'Localização': row[XLSX.utils.encode_cell({ c: 9, r: 6 + index + 1 })[1]] || ''
                 }));
 
+                console.log('Dados carregados:', stockData); // Log para depuração
                 document.getElementById('status').innerHTML = 'Dados carregados com sucesso!';
                 displayResults(stockData); // Mostra todos os itens inicialmente
             } catch (error) {
@@ -115,6 +116,7 @@
                 (item['Código do Item'] && item['Código do Item'].toString().toLowerCase().includes(query)) ||
                 (item['Descrição'] && item['Descrição'].toString().toLowerCase().includes(query))
             );
+            console.log('Resultados filtrados:', filtered); // Log para depuração
             displayResults(filtered);
         }
 
