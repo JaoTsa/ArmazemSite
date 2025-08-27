@@ -77,7 +77,7 @@
 
         async function loadExcel() {
             try {
-                const fileName = encodeURI('Referencias Spares___.xlsm');
+                const fileName = encodeURI('Referencias Spares___TESTE');
                 const response = await fetch(fileName);
                 if (!response.ok) {
                     throw new Error(`Erro HTTP: ${response.status} ${response.statusText}`);
