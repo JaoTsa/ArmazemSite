@@ -56,17 +56,17 @@
 
         // Função para carregar o CSV
         function loadData() {
-            Papa.parse('Referencias Spares___(3).csv', {
+            Papa.parse('Referencias_Spares.csv', {
                 download: true,
                 header: true,
                 complete: function(results) {
                     stockData = results.data;
-                    document.getElementById('status').innerHTML = 'Dados carregados!';
+                    document.getElementById('status').innerHTML = 'Dados carregados com sucesso!';
                     displayResults(stockData); // Mostra todos os itens inicialmente
                 },
                 error: function(error) {
-                    document.getElementById('status').innerHTML = 'Erro ao carregar Referencias_Spares.csv. Verifique o arquivo no repositório.';
-                    console.error('Erro:', error);
+                    document.getElementById('status').innerHTML = 'Erro ao carregar Referencias_Spares.csv. Verifique se o arquivo está na raiz do repositório e é um CSV válido.';
+                    console.error('Erro ao carregar o CSV:', error);
                 }
             });
         }
