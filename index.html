@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Consulta de Estoque</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -52,23 +52,26 @@
     <div id="results"></div>
 
     <script>
-        let stockData = []; // Array para armazenar os dados do CSV
+        let stockData = []; // Array para armazenar os dados do XLSM
 
-        // Função para carregar o CSV
-        function loadData() {
-            Papa.parse('/Referencias_Spares.csv', {
-                download: true,
-                header: true,
-                complete: function(results) {
-                    stockData = results.data;
-                    document.getElementById('status').innerHTML = 'Dados carregados com sucesso!';
-                    displayResults(stockData); // Mostra todos os itens inicialmente
-                },
-                error: function(error) {
-                    document.getElementById('status').innerHTML = 'Erro ao carregar Referencias_Spares.csv. Verifique se o arquivo está na pasta /public no GitHub.';
-                    console.error('Erro ao carregar o CSV:', error);
+        // Função para carregar o XLSM
+        async function loadData() {
+            try {
+                const response = await fetch('/Referencias_Spares.xlsm');
+                if (!response.ok) {
+                    throw new Error('Arquivo XLSM não encontrado');
                 }
-            });
+                const arrayBuffer = await response.arrayBuffer();
+                const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+                const sheetName = workbook.SheetNames[0];
+                const sheet = workbook.Sheets[sheetName];
+                stockData = XLSX.utils.sheet_to_json(sheet);
+                document.getElementById('status').innerHTML = 'Dados carregados com sucesso!';
+                displayResults(stockData); // Mostra todos os itens inicialmente
+            } catch (error) {
+                document.getElementById('status').innerHTML = 'Erro ao carregar Referencias_Spares.xlsm. Verifique se o arquivo está na pasta /public.';
+                console.error('Erro ao carregar o XLSM:', error);
+            }
         }
 
         // Função para exibir resultados em tabela
@@ -96,8 +99,8 @@
         function searchItems() {
             const query = document.getElementById('searchInput').value.toLowerCase();
             const filtered = stockData.filter(item => 
-                (item.Item && item.Item.toLowerCase().includes(query)) ||
-                (item.Descrição && item.Descrição.toLowerCase().includes(query))
+                (item.Item && item.Item.toString().toLowerCase().includes(query)) ||
+                (item.Descrição && item.Descrição.toString().toLowerCase().includes(query))
             );
             displayResults(filtered);
         }
