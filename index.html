@@ -47,7 +47,7 @@
 </head>
 <body>
     <h1>Consulta de Estoque</h1>
-    <input type="text" id="searchInput" placeholder="Digite o código ou descrição do item..." onkeyup="searchItems()">
+    <input type="text" id="searchInput" placeholder="Digite o código (ex.: 7224531212n) ou descrição do item..." onkeyup="searchItems()">
     <div id="status">Carregando dados, por favor aguarde...</div>
     <div id="results"></div>
 
@@ -115,11 +115,12 @@
 
         // Função de pesquisa
         function searchItems() {
-            const query = document.getElementById('searchInput').value.toLowerCase();
-            const filtered = stockData.filter(item => 
-                (item['Código do Item'] && item['Código do Item'].toString().toLowerCase().includes(query)) ||
-                (item['DESCRIÇÃO'] && item['DESCRIÇÃO'].toString().toLowerCase().includes(query))
-            );
+            const query = document.getElementById('searchInput').value.toLowerCase().trim();
+            const filtered = stockData.filter(item => {
+                const code = item['Código do Item'] ? item['Código do Item'].toString().toLowerCase() : '';
+                const description = item['DESCRIÇÃO'] ? item['DESCRIÇÃO'].toString().toLowerCase() : '';
+                return code.includes(query) || description.includes(query);
+            });
             console.log('Pesquisa com query:', query, 'Resultados:', filtered);
             displayResults(filtered);
         }
