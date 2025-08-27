@@ -64,12 +64,12 @@
                 const arrayBuffer = await response.arrayBuffer();
                 const workbook = XLSX.read(arrayBuffer, { type: 'array' });
 
-                // Verifica se a planilha "Master" existe
-                if (!workbook.SheetNames.includes('Master')) {
-                    throw new Error('Planilha "Master" não encontrada no arquivo XLSM');
+                // Verifica se a planilha "MASTER" existe
+                if (!workbook.SheetNames.includes('MASTER')) {
+                    throw new Error('Planilha "MASTER" não encontrada no arquivo XLSM');
                 }
 
-                const sheet = workbook.Sheets['Master'];
+                const sheet = workbook.Sheets['MASTER'];
                 // Converte a planilha para JSON, começando da linha 7
                 const rawData = XLSX.utils.sheet_to_json(sheet, { range: 6 }); // range: 6 começa na linha 7 (0-based)
 
@@ -83,7 +83,7 @@
                 document.getElementById('status').innerHTML = 'Dados carregados com sucesso!';
                 displayResults(stockData); // Mostra todos os itens inicialmente
             } catch (error) {
-                document.getElementById('status').innerHTML = 'Erro ao carregar Referencias_Spares.xlsm. Verifique se o arquivo está em /public e contém a planilha "Master".';
+                document.getElementById('status').innerHTML = 'Erro ao carregar Referencias_Spares.xlsm. Verifique se o arquivo está em /public e contém a planilha "MASTER".';
                 console.error('Erro ao carregar o XLSM:', error);
             }
         }
