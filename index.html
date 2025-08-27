@@ -47,7 +47,7 @@
 </head>
 <body>
     <h1>Consulta de Estoque</h1>
-    <input type="text" id="searchInput" placeholder="Digite o código (ex.: 7224531212n) ou descrição do item..." onkeyup="searchItems()">
+    <input type="text" id="searchInput" placeholder="Digite a referência (ex.: 7224531212n) ou descrição..." onkeyup="searchItems()">
     <div id="status">Carregando dados, por favor aguarde...</div>
     <div id="results"></div>
 
@@ -73,14 +73,19 @@
 
                 const sheet = workbook.Sheets['MASTER'];
                 // Converte a planilha para JSON, começando da linha 7 (range: 6)
-                const rawData = XLSX.utils.sheet_to_json(sheet, { range: 6, defval: '' });
+                const rawData = XLSX.utils.sheet_to_json(sheet, { range: 6, defval: '', header: 1 });
 
                 // Mapeia apenas as colunas C (2), D (3), J (9)
-                stockData = rawData.map((row, index) => ({
-                    'Código do Item': row['Código do Item'] || row[XLSX.utils.encode_cell({ c: 2, r: 6 + index + 1 })[1]] || '',
-                    'DESCRIÇÃO': row['DESCRIÇÃO'] || row[XLSX.utils.encode_cell({ c: 3, r: 6 + index + 1 })[1]] || '',
-                    'LOCALIZAÇÃO': row['LOCALIZAÇÃO'] || row[XLSX.utils.encode_cell({ c: 9, r: 6 + index + 1 })[1]] || ''
-                }));
+                stockData = rawData.map((row, index) => {
+                    const ref = row[2] !== undefined ? row[2].toString() : ''; // Coluna C (índice 2)
+                    const desc = row[3] !== undefined ? row[3].toString() : ''; // Coluna D (índice 3)
+                    const loc = row[9] !== undefined ? row[9].toString() : ''; // Coluna J (índice 9)
+                    return {
+                        'REFERÊNCIA': ref,
+                        'DESCRIÇÃO': desc,
+                        'LOCALIZAÇÃO': loc
+                    };
+                }).filter(row => row['REFERÊNCIA'] || row['DESCRIÇÃO'] || row['LOCALIZAÇÃO']); // Remove linhas vazias
 
                 console.log('Dados carregados:', stockData);
                 document.getElementById('status').innerHTML = 'Dados carregados com sucesso!';
@@ -100,10 +105,10 @@
                 return;
             }
 
-            let table = '<table><tr><th>Código do Item</th><th>DESCRIÇÃO</th><th>LOCALIZAÇÃO</th></tr>';
+            let table = '<table><tr><th>REFERÊNCIA</th><th>DESCRIÇÃO</th><th>LOCALIZAÇÃO</th></tr>';
             data.forEach(row => {
                 table += `<tr>
-                    <td>${row['Código do Item'] || ''}</td>
+                    <td>${row['REFERÊNCIA'] || ''}</td>
                     <td>${row['DESCRIÇÃO'] || ''}</td>
                     <td>${row['LOCALIZAÇÃO'] || ''}</td>
                 </tr>`;
@@ -117,9 +122,9 @@
         function searchItems() {
             const query = document.getElementById('searchInput').value.toLowerCase().trim();
             const filtered = stockData.filter(item => {
-                const code = item['Código do Item'] ? item['Código do Item'].toString().toLowerCase() : '';
-                const description = item['DESCRIÇÃO'] ? item['DESCRIÇÃO'].toString().toLowerCase() : '';
-                return code.includes(query) || description.includes(query);
+                const ref = item['REFERÊNCIA'] ? item['REFERÊNCIA'].toString().toLowerCase() : '';
+                const desc = item['DESCRIÇÃO'] ? item['DESCRIÇÃO'].toString().toLowerCase() : '';
+                return ref.includes(query) || desc.includes(query);
             });
             console.log('Pesquisa com query:', query, 'Resultados:', filtered);
             displayResults(filtered);
